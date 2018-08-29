@@ -31,7 +31,7 @@ def color_to_angle(color):
 
 class CarlaMap(object):
 
-    def __init__(self, city, pixel_density=0.1643, node_density=50.0):
+    def __init__(self, city, pixel_density=0.1643, node_density=50):
         dir_path = os.path.dirname(__file__)
         city_file = os.path.join(dir_path, city + '.txt')
 
@@ -67,8 +67,9 @@ class CarlaMap(object):
 
         return self._graph.get_resolution()
     def check_pixel_on_map(self, pixel):
-        if pixel[0] < self.map_image_lanes.shape[0] and pixel[0] > 0 and \
-            pixel[1] < self.map_image_lanes.shape[1] and pixel[1] > 0:
+
+        if pixel[0] < self.map_image_lanes.shape[1] and pixel[0] > 0 and \
+            pixel[1] < self.map_image_lanes.shape[0] and pixel[1] > 0:
             return True
         else:
             return False
@@ -154,6 +155,7 @@ class CarlaMap(object):
 
     def is_point_on_lane(self, world):
         pixel = self.convert_to_pixel(world)
+
         if not self.check_pixel_on_map(pixel):
             return False
 
