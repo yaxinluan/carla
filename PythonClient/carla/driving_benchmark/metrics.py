@@ -253,6 +253,12 @@ class Metrics(object):
                                                      all_weathers},
                               'collision_other': {w: [[] for i in range(len(tasks))] for w in
                                                   all_weathers},
+                              'end_pedestrian_collision': {w: [0] * len(tasks) for w in
+                                                           all_weathers},
+                              'end_vehicle_collision': {w: [0] * len(tasks) for w in
+                                                           all_weathers},
+                              'end_other_collision': {w: [0] * len(tasks) for w in
+                                                           all_weathers},
                               'episodes_fully_completed': {w: [0] * len(tasks) for w in
                                                            all_weathers},
                               'average_speed': {w: [0] * len(tasks) for w in all_weathers},
@@ -277,8 +283,18 @@ class Metrics(object):
                                    measurements_matrix[:, header_metrics.index('weather')] == float(
                                        w))]
 
+                metrics_dictionary['end_pedestrian_collision'][w][t] = \
+                    experiment_results_matrix[:, header.index('end_pedestrian_collision')].tolist()
+
+                metrics_dictionary['end_vehicle_collision'][w][t] = \
+                    experiment_results_matrix[:, header.index('end_vehicle_collision')].tolist()
+
+                metrics_dictionary['end_other_collision'][w][t] = \
+                    experiment_results_matrix[:, header.index('end_other_collision')].tolist()
+
                 metrics_dictionary['episodes_fully_completed'][w][t] = \
                     experiment_results_matrix[:, header.index('result')].tolist()
+
 
                 metrics_dictionary['episodes_completion'][w][t] = \
                     ((experiment_results_matrix[:, header.index('initial_distance')]

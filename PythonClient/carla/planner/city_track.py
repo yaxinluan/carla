@@ -10,7 +10,7 @@ from carla.planner.graph import sldist
 
 from carla.planner.astar import AStar
 from carla.planner.map import CarlaMap
-
+import sys
 
 class CityTrack(object):
 
@@ -154,6 +154,9 @@ class CityTrack(object):
 
             route = a_star.solve()
         """
+        if route is None:
+            print('Impossible to find route, returning previous route', file=sys.stderr)
+            return self._route
 
         self._route = route
 

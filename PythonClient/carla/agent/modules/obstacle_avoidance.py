@@ -7,11 +7,8 @@ class ObstacleAvoidance(object):
 
     def __init__(self, param, city_name):
 
-
-        self._node_density = 50.0
-        self._pixel_density = 0.1643
-
-        self._map = CarlaMap(city_name, self._pixel_density, self._node_density)
+        print (" Map Name ", city_name)
+        self._map = CarlaMap(city_name)
         self.param = param
         # Select WP Number
 
@@ -145,8 +142,8 @@ class ObstacleAvoidance(object):
         x_agent = pedestrian.transform.location.x
         y_agent = pedestrian.transform.location.y
 
-
         return self._map.is_point_on_lane([x_agent, y_agent, 38])
+
 
     def is_vehicle_on_same_lane(self, player, vehicle):
         """
@@ -284,6 +281,7 @@ class ObstacleAvoidance(object):
                 if self.is_pedestrian_hitable(agent.pedestrian):
 
                     speed_factor_p = self.stop_pedestrian(location, agent, wp_vector, speed_factor_p)
+
                     hitable_pedestrians.append(agent.id)
 
             if agent.HasField('vehicle') and self.param['stop4V']:
