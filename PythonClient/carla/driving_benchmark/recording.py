@@ -87,7 +87,8 @@ class Recording(object):
     def log_start(self, id_experiment):
 
         with open(self._internal_log_name, 'a+') as log:
-            log.write('Start Task %d \n' % id_experiment)
+            log.write('Start Task %s \n' % str(id_experiment))
+
 
     def log_end(self):
         with open(self._internal_log_name, 'a+') as log:
