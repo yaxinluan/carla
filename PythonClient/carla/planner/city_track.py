@@ -3,7 +3,6 @@
 #
 # This work is licensed under the terms of the MIT license.
 # For a copy, see <https://opensource.org/licenses/MIT>.
-
 import numpy as np
 
 from carla.planner.graph import sldist
@@ -155,7 +154,7 @@ class CityTrack(object):
             route = a_star.solve()
         """
         if route is None:
-            print('Impossible to find route, returning previous route', file=sys.stderr)
+            print('Impossible to find route, returning previous route')
             return self._route
 
         self._route = route
