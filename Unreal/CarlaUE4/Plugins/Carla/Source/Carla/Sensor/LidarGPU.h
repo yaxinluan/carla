@@ -11,17 +11,17 @@
 #include "Sensor/LidarMeasurement.h"
 #include "Settings/LidarDescription.h"
 
-#include "Lidar.generated.h"
+#include "LidarGPU.generated.h"
 
-/// A ray-trace based Lidar sensor.
+/// A GPU depth based Lidar sensor.
 UCLASS()
-class CARLA_API ALidar : public ASensor
+class CARLA_API ALidarGPU : public ASensor
 {
   GENERATED_BODY()
-
-public:
-
-  ALidar(const FObjectInitializer &ObjectInitializer);
+	
+public:	
+	
+  ALidarGPU(const FObjectInitializer &ObjectInitializer);
 
   void Set(const ULidarDescription &LidarDescription);
 
@@ -29,10 +29,14 @@ protected:
 
   virtual void Tick(float DeltaTime) override;
 
-private:
-
+private:	
+  
   /// Creates a Laser for each channel.
   void CreateLasers();
+
+  void CreateSceneCapture2D();
+
+  void Rotate(float DeltaTime);
 
   /// Updates LidarMeasurement with the points read in DeltaTime.
   void ReadPoints(float DeltaTime);
@@ -40,10 +44,14 @@ private:
   /// Shoot a laser ray-trace, return whether the laser hit something.
   bool ShootLaser(uint32 Channel, float HorizontalAngle, FVector &Point) const;
 
+  /// Debug Lidar visualization
+  void RenderDebugLidar();
+
   UPROPERTY(Category = "Lidar", VisibleAnywhere)
   const ULidarDescription *Description = nullptr;
 
   TArray<float> LaserAngles;
 
   FLidarMeasurement LidarMeasurement;
+
 };
