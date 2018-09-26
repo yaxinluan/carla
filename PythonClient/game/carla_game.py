@@ -378,15 +378,16 @@ class CarlaGame(object):
             surface = pygame.surfarray.make_surface(array.swapaxes(0, 1))
 
             # Draw other two fovs
-            fov_1 = fov_list[0]
-            fov_2 = fov_list[1]
+            if fov_list is not None:
+                fov_1 = fov_list[0]
+                fov_2 = fov_list[1]
 
-            self._draw_fov(surface, player_position,
-                           vector_to_degrees([player_transform.orientation.x, player_transform.orientation.y]),
-                           radius=fov_1[0]/(0.1643*2), angle=fov_1[1], color=[0, 255, 0, 255])
-            self._draw_fov(surface, player_position,
-                           vector_to_degrees([player_transform.orientation.x, player_transform.orientation.y]),
-                           radius=fov_2[0]/(0.1643*2), angle=fov_2[1], color=[0, 255, 128, 255])
+                self._draw_fov(surface, player_position,
+                               vector_to_degrees([player_transform.orientation.x, player_transform.orientation.y]),
+                               radius=fov_1[0]/(0.1643*2), angle=fov_1[1], color=[0, 255, 0, 255])
+                self._draw_fov(surface, player_position,
+                               vector_to_degrees([player_transform.orientation.x, player_transform.orientation.y]),
+                               radius=fov_2[0]/(0.1643*2), angle=fov_2[1], color=[0, 255, 128, 255])
 
             w_pos = int(
                 player_position[0] * (float(self._window_height) / float(self._map_shape[0])))
