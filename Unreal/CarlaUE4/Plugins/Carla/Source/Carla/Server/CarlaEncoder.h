@@ -13,7 +13,9 @@
 #include "Sensor/SensorDataView.h"
 #include "Vehicle/VehicleControl.h"
 
+#include <compiler/disable-ue4-macros.h>
 #include <carla/carla_server.h>
+#include <compiler/enable-ue4-macros.h>
 
 /// Encodes Unreal classes to CarlaServer API. To be used by FCarlaServer only.
 class FCarlaEncoder : private IAgentComponentVisitor

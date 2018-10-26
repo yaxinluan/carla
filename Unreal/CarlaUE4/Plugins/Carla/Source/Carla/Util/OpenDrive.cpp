@@ -5,9 +5,11 @@
 // For a copy, see <https://opensource.org/licenses/MIT>.
 
 #include "Carla.h"
+
 #include "Carla/Util/OpenDrive.h"
 
-#include "Engine.h"
+#include "Paths.h"
+#include "FileHelper.h"
 
 FString FOpenDrive::Load(FString MapName)
 {

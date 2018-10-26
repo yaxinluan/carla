@@ -9,13 +9,13 @@
 
 #include "Carla/Sensor/Sensor.h"
 
-
+#include <compiler/disable-ue4-macros.h>
 #include <carla/sensor/SensorRegistry.h>
-
 
 #define LIBCARLA_SENSOR_REGISTRY_WITH_SENSOR_INCLUDES
 #include <carla/sensor/SensorRegistry.h>
 #undef LIBCARLA_SENSOR_REGISTRY_WITH_SENSOR_INCLUDES
+#include <compiler/enable-ue4-macros.h>
 
 #include <type_traits>
 
