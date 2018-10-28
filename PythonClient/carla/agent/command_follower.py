@@ -124,8 +124,10 @@ class CommandFollower(Agent):
         #   stop_traffic_lights
         #  }
 
-        speed_factor, info, state = self.obstacle_avoider.stop_for_agents(player.transform.location, wp_angle,
-                                                             wp_vector, agents)
+        speed_factor, info, state, positions = self.obstacle_avoider.stop_for_agents(player.transform.location,
+                                                                          player.transform.orientation,
+                                                                          wp_angle,
+                                                                          wp_vector, agents)
 
 
 
@@ -137,4 +139,4 @@ class CommandFollower(Agent):
         fovs = [[self.param_obstacles['p_dist_hit_thres'], self.param_obstacles['p_angle_hit_thres'] ],
                 [self.param_obstacles['p_dist_eme_thres'], self.param_obstacles['p_angle_eme_thres']]]
 
-        return control, waypoints, waypoints_world, route, info, fovs, state
+        return control, waypoints, waypoints_world, route, info, fovs, state, positions

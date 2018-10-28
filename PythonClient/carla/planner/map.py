@@ -35,7 +35,7 @@ class CarlaMap(object):
         dir_path = os.path.dirname(__file__)
         city_file = os.path.join(dir_path, city + '.txt')
 
-        city_map_file = os.path.join(dir_path, city + '.png')
+        city_map_file = os.path.join(dir_path, city + 'Lanes.png')
         city_map_file_lanes = os.path.join(dir_path, city + 'Lanes.png')
         city_map_file_center = os.path.join(dir_path, city + 'Central.png')
 

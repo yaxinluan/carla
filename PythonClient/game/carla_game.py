@@ -303,7 +303,7 @@ class CarlaGame(object):
 
         pygame.draw.circle(surface, [0, 255, 0, 255], (w_pos, h_pos), 3, 0)
 
-    def render(self, sensor_data, camera_names, player_transform=None, waypoints=None,
+    def render(self, sensor_data, camera_names, drawable_positions=None, player_transform=None, waypoints=None,
                agents_positions=None, route=None, hitable_pedestrians=None, fov_list=None):
         """
         Main rendering function.
@@ -377,6 +377,25 @@ class CarlaGame(object):
                 float(self._map_shape[1])
             surface = pygame.surfarray.make_surface(array.swapaxes(0, 1))
 
+            # Draw some extra points
+
+            if drawable_positions is not None:
+                print ("drawable_positions ", drawable_positions)
+
+                for position in drawable_positions:
+                    map_position = self._map.convert_to_pixel([
+                        position[0],
+                        position[1],
+                        38
+                    ])
+
+                    w_pos = int(map_position[0] * (
+                            float(self._window_height) / float(self._map_shape[0])))
+                    h_pos = int(map_position[1] * (new_window_width / float(self._map_shape[1])))
+                    color = [128, 128, 0, 255]
+                    pygame.draw.circle(surface, color, (w_pos, h_pos), 4, 0)
+
+            fov_list = None
             # Draw other two fovs
             if fov_list is not None:
                 fov_1 = fov_list[0]
@@ -402,16 +421,16 @@ class CarlaGame(object):
             self._draw_goal_position(surface)
             pygame.draw.circle(surface, [255, 0, 0, 255], (w_pos, h_pos), 3, 0)
             for agent in agents_positions:
-                if agent.HasField('pedestrian'):
+                if agent.HasField('traffic_light'):
                     if  hitable_pedestrians is not None and agent.id in hitable_pedestrians:
                         color = [255, 128, 0, 255]
                     else:
                         color = [255, 0, 255, 255]
 
                     agent_position = self._map.convert_to_pixel([
-                        agent.pedestrian.transform.location.x,
-                        agent.pedestrian.transform.location.y,
-                        agent.pedestrian.transform.location.z])
+                        agent.traffic_light.transform.location.x,
+                        agent.traffic_light.transform.location.y,
+                        agent.traffic_light.transform.location.z])
 
                     w_pos = int(agent_position[0] * (
                             float(self._window_height) / float(self._map_shape[0])))

@@ -22,7 +22,7 @@ class ObstacleAvoidance(object):
 
         return tl_dist > (self.param['tl_min_dist_thres'])
 
-    def is_traffic_light_active(self, location, agent):
+    def is_traffic_light_active(self, location, agent, orientation):
 
         x_agent = agent.traffic_light.transform.location.x
         y_agent = agent.traffic_light.transform.location.y
@@ -80,8 +80,17 @@ class ObstacleAvoidance(object):
         closest_lane_point = search_closest_lane_point(x_agent, y_agent, 0)
 
 
-        return math.fabs(self._map.get_lane_orientation_degrees([location.x, location.y, 38]) -
-        self._map.get_lane_orientation_degrees([closest_lane_point[0], closest_lane_point[1], 38])) < 1
+        # math.fabs(self._map.get_lane_orientation_degrees([location.x, location.y, 38])
+
+        print("  Angle ", math.atan2(orientation.y, orientation.x) + 3.1415)
+
+        car_direction = math.atan2(orientation.y, orientation.x) + 3.1415
+        if car_direction > 6.0:
+            car_direction -= 6.0
+
+        return math.fabs(car_direction -
+        self._map.get_lane_orientation_degrees([closest_lane_point[0], closest_lane_point[1], 38])
+                         ) < 1
 
 
     def stop_traffic_light(self, location, agent, wp_vector, wp_angle, speed_factor_tl):
@@ -121,11 +130,71 @@ class ObstacleAvoidance(object):
 
         return speed_factor_tl
 
+    def has_burned_traffic_light(self, location, agent, wp_vector, orientation):
+
+        def is_on_burning_point(_map, location):
+
+            # We get the current lane orientation
+            ori_x, ori_y = _map.get_lane_orientation([location.x, location.y, 38])
+
+            print("orientation ", ori_x, ori_y)
+            # We test to walk in direction of the lane
+            future_location_x = location.x
+            future_location_y = location.y
+
+            print ("future ", future_location_x, future_location_y)
+
+            for i in range(3):
+                future_location_x += ori_x
+                future_location_y += ori_y
+            # Take a point on a intersection in the future
+            location_on_intersection_x = future_location_x + 2*ori_x
+            location_on_intersection_y = future_location_y + 2*ori_y
+            print ("location ", location_on_intersection_x, location_on_intersection_y)
+
+            if not _map.is_point_on_intersection([future_location_x,
+                                                  future_location_y,
+                                                  38]) and \
+               _map.is_point_on_intersection([location_on_intersection_x,
+                                              location_on_intersection_y,
+                                              38]):
+               return [[future_location_x, future_location_y],
+                       [location_on_intersection_x, location_on_intersection_y]
+                       ], True
+
+            return [[future_location_x, future_location_y],
+                    [location_on_intersection_x, location_on_intersection_y]
+                    ], False
+
+        positions = []
+        # The vehicle is on not an intersection
+        if not self._map.is_point_on_intersection([location.x, location.y, 38]):
+            x_agent = agent.traffic_light.transform.location.x
+            y_agent = agent.traffic_light.transform.location.y
+            tl_vector, tl_dist = get_vec_dist(x_agent, y_agent, location.x, location.y)
+            # tl_angle = self.get_angle(tl_vector,[ori_x_player,ori_y_player])
+            tl_angle = get_angle(tl_vector, wp_vector)
+
+            if agent.traffic_light.state != 0:  # Not green
+
+                if self.is_traffic_light_active(location, agent, orientation):
+                    print("ORIENTATION ", orientation.x, "  ", orientation.y)
+                    print("  Angle ", math.atan2(orientation.y, orientation.x) + 3.1415)
+                    print( " LOCATION ", location.x, location.y)
+                    print('Traffic Light: ', tl_dist, tl_angle)
+                    positions, burned = is_on_burning_point(self._map, location)
+                    if burned and tl_dist < 6.0:
+                        print("ORIENTATION ", orientation.x, "  ", orientation.y)
+                        print(" Angle ", math.atan2(orientation.y, orientation.x) + 3.1415)
+                        print(" LOCATION ", location.x, location.y)
+                        print('Traffic Light: ', tl_dist, tl_angle)
+                        print(" \n\n BUUURNNNNNNN \n\n")
+                        exit(1)
+                        return positions
+
+        return positions
 
 
-
-
-        # TODO this functions should be all separate.
     def is_pedestrian_hitable(self, pedestrian):
 
         """
@@ -210,9 +279,6 @@ class ObstacleAvoidance(object):
             speed_factor_p_temp = p_dist / (self.param['coast_factor'] * self.param['p_dist_hit_thres'])
 
 
-            #print()
-            #print (" CASE 1 Pedestrian")
-            #print()
 
         if self.is_pedestrian_on_near_hit_zone(p_dist, p_angle):
 
@@ -261,28 +327,37 @@ class ObstacleAvoidance(object):
 
         return speed_factor_v
 
-    def stop_for_agents(self, location, wp_angle, wp_vector, agents):
+    def stop_for_agents(self, location, orientation, wp_angle, wp_vector, agents):
 
         speed_factor = 1
         speed_factor_tl = 1
         speed_factor_p = 1
         speed_factor_v = 1
         hitable_pedestrians = []    # The list of pedestrians that are on roads or nearly on roads
+        out_pos = []
 
         for agent in agents:
+
+            positions = self.has_burned_traffic_light( location, agent, wp_vector, orientation)
+
+            if len(positions) > 0:
+
+                out_pos = positions
+
             if agent.HasField('traffic_light') and self.param['stop4TL']:
-                if self.is_traffic_light_active(location, agent) and self.is_traffic_light_visible(location, agent):
+                if self.is_traffic_light_active(location, agent, orientation) and self.is_traffic_light_visible(location, agent):
 
                     speed_factor_tl = self.stop_traffic_light(location, agent, wp_vector,
                                                               wp_angle, speed_factor_tl)
 
+
+                    hitable_pedestrians.append(agent.id)
 
             if agent.HasField('pedestrian') and self.param['stop4P']:
                 if self.is_pedestrian_hitable(agent.pedestrian):
 
                     speed_factor_p = self.stop_pedestrian(location, agent, wp_vector, speed_factor_p)
 
-                    hitable_pedestrians.append(agent.id)
 
             if agent.HasField('vehicle') and self.param['stop4V']:
                 if self.is_vehicle_on_same_lane(player=location, vehicle=agent.vehicle):
@@ -298,4 +373,4 @@ class ObstacleAvoidance(object):
             'stop_traffic_lights': speed_factor_tl
         }
 
-        return speed_factor, hitable_pedestrians, state
+        return speed_factor, hitable_pedestrians, state, out_pos

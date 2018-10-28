@@ -9,6 +9,7 @@ import abc
 import logging
 import math
 import time
+import numpy as np
 
 from carla.client import VehicleControl
 from carla.client import make_carla_client
@@ -19,6 +20,11 @@ from carla.tcp import TCPConnectionError
 
 from . import results_printer
 from .recording import Recording
+
+def get_vec_dist(x_dst, y_dst, x_src, y_src):
+    vec = np.array([x_dst, y_dst] - np.array([x_src, y_src]))
+    dist = math.sqrt(vec[0] ** 2 + vec[1] ** 2)
+    return vec / dist, dist
 
 
 def sldist(c1, c2):
@@ -68,6 +74,7 @@ class DrivingBenchmark(object):
 
         # We have a default planner instantiated that produces high level commands
         self._planner = Planner(city_name)
+        self._map = self._planner._city_track.get_map()
 
         # TO keep track of the previous collisions
         self._previous_pedestrian_collision = 0
@@ -143,7 +150,8 @@ class DrivingBenchmark(object):
                             str(experiment.Conditions.WeatherId) + '_'
                             + str(experiment.task) + '_' + str(start_index)
                             + '.' + str(end_index), experiment_suite.metrics_parameters,
-                            experiment_suite.collision_as_failure)
+                            experiment_suite.collision_as_failure,
+                            experiment_suite.traffic_light_as_failure)
 
                     # Write the general status of the just ran episode
                     self._recording.write_summary_results(
@@ -222,6 +230,118 @@ class DrivingBenchmark(object):
         self._previous_other_collision = measurement.collision_other
 
         return collided_ped, collided_veh, collided_oth
+    def _is_traffic_light_active(self, agent, orientation):
+
+        x_agent = agent.traffic_light.transform.location.x
+        y_agent = agent.traffic_light.transform.location.y
+
+        #_, tl_dist = get_vec_dist(x_agent, y_agent, location.x, location.y)
+        def search_closest_lane_point(x_agent, y_agent, depth):
+            step_size = 4
+            if depth > 1:
+                return None
+            try:
+                degrees = self._map.get_lane_orientation_degrees([x_agent, y_agent, 38])
+                #print (degrees)
+            except:
+                return None
+
+            if not self._map.is_point_on_lane([x_agent, y_agent, 38]):
+                #print (" Not on lane ")
+                result = search_closest_lane_point(x_agent + step_size, y_agent, depth+1)
+                if result is not None:
+                    return result
+                result = search_closest_lane_point(x_agent, y_agent + step_size, depth+1)
+                if result is not None:
+                    return result
+                result = search_closest_lane_point(x_agent + step_size, y_agent + step_size, depth+1)
+                if result is not None:
+                    return result
+                result = search_closest_lane_point(x_agent + step_size, y_agent - step_size, depth+1)
+                if result is not None:
+                    return result
+                result = search_closest_lane_point(x_agent - step_size, y_agent + step_size, depth+1)
+                if result is not None:
+                    return result
+                result = search_closest_lane_point(x_agent - step_size, y_agent, depth+1)
+                if result is not None:
+                    return result
+                result = search_closest_lane_point(x_agent, y_agent - step_size, depth+1)
+                if result is not None:
+                    return result
+                result = search_closest_lane_point(x_agent - step_size, y_agent - step_size, depth+1)
+                if result is not None:
+                    return result
+            else:
+                #print(" ON Lane ")
+                if degrees < 6:
+                    return [x_agent, y_agent]
+                else:
+                    return None
+
+
+        closest_lane_point = search_closest_lane_point(x_agent, y_agent, 0)
+        car_direction = math.atan2(orientation.y, orientation.x) + 3.1415
+        if car_direction > 6.0:
+            car_direction -= 6.0
+
+        return math.fabs(car_direction -
+            self._map.get_lane_orientation_degrees([closest_lane_point[0], closest_lane_point[1], 38])
+                         ) < 1
+
+    def _has_agent_burned_tl(self, measurement):
+
+        def is_on_burning_point(_map, location):
+
+            # We get the current lane orientation
+            ori_x, ori_y = _map.get_lane_orientation([location.x, location.y, 38])
+
+            # We test to walk in direction of the lane
+            future_location_x = location.x
+            future_location_y = location.y
+
+            for i in range(3):
+                future_location_x += ori_x
+                future_location_y += ori_y
+            # Take a point on a intersection in the future
+            location_on_intersection_x = future_location_x + 2 * ori_x
+            location_on_intersection_y = future_location_y + 2 * ori_y
+
+            if not _map.is_point_on_intersection([future_location_x,
+                                                  future_location_y,
+                                                  38]) and \
+                    _map.is_point_on_intersection([location_on_intersection_x,
+                                                   location_on_intersection_y,
+                                                   38]):
+                return True
+
+            return False
+
+        # Check nearest traffic light with the correct orientation state.
+
+        player_x = measurement.player_measurements.transform.location.x
+        player_y = measurement.player_measurements.transform.location.y
+
+        # The vehicle is on an intersection
+        # THIS IS THE PLACE TO VERIFY FOR A TL BURN
+
+        for agent in measurement.non_player_agents:
+
+            if not self._map.is_point_on_intersection([player_x, player_y, 38]):
+                x_agent = agent.traffic_light.transform.location.x
+                y_agent = agent.traffic_light.transform.location.y
+                tl_vector, tl_dist = get_vec_dist(x_agent, y_agent, player_x, player_y)
+
+                if agent.traffic_light.state != 0:  # Not green
+                    if self._is_traffic_light_active(agent,
+                                                     measurement.player_measurements.transform.orientation):
+                        if is_on_burning_point(self._map,
+                                               measurement.player_measurements.transform.location) \
+                                and tl_dist < 6.0:
+                            return True
+
+        return False
+
 
     def _run_navigation_episode(
             self,
@@ -231,7 +351,8 @@ class DrivingBenchmark(object):
             target,
             episode_name,
             metrics_parameters,
-            collision_as_failure):
+            collision_as_failure,
+            traffic_light_as_failure):
         """
          Run one episode of the benchmark (Pose) for a certain agent.
 
@@ -297,12 +418,16 @@ class DrivingBenchmark(object):
                 float(distance), current_x, current_y, target.location.x,
                 target.location.y)
             # Check if reach the target
-            col_ped, col_veh, col_oth = self._has_agent_collided(measurements.player_measurements, metrics_parameters)
+            col_ped, col_veh, col_oth = self._has_agent_collided(measurements.player_measurements,
+                                                                 metrics_parameters)
+
             if distance < self._distance_for_success:
                 success = True
             elif (current_timestamp - initial_timestamp) > (time_out * 1000):
                 fail = True
             elif collision_as_failure and (col_ped or col_veh or col_oth):
+                fail = True
+            elif traffic_light_as_failure and self._has_agent_burned_tl(measurements):
                 fail = True
 
 

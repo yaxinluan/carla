@@ -85,6 +85,9 @@ class ExperimentSuite(object):
     def collision_as_failure(self):
         return False
 
+    @property
+    def traffic_light_as_failure(self):
+        return False
 
     @abc.abstractmethod
     def build_experiments(self):
