@@ -26,7 +26,6 @@ class ObstacleAvoidance(object):
 
         x_agent = agent.traffic_light.transform.location.x
         y_agent = agent.traffic_light.transform.location.y
-
         #_, tl_dist = get_vec_dist(x_agent, y_agent, location.x, location.y)
         def search_closest_lane_point(x_agent, y_agent, depth):
             step_size = 4
@@ -71,8 +70,6 @@ class ObstacleAvoidance(object):
                     return [x_agent, y_agent]
                 else:
                     return None
-
-
 
 
         #print (" Start ")

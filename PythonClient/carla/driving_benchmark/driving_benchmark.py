@@ -143,8 +143,10 @@ class DrivingBenchmark(object):
                     time_out = experiment_suite.calculate_time_out(
                         self._get_shortest_path(positions[start_index], positions[end_index]))
 
+                    logging.info('Timeout for Episode: %f', time_out)
                     # running the agent
-                    (result, reward_vec, control_vec, final_time, remaining_distance, col_ped, col_veh, col_oth) = \
+                    (result, reward_vec, control_vec, final_time, remaining_distance, col_ped,
+                     col_veh, col_oth, number_of_red_lights, number_of_green_lights) = \
                         self._run_navigation_episode(
                             agent, client, time_out, positions[end_index],
                             str(experiment.Conditions.WeatherId) + '_'
@@ -156,7 +158,8 @@ class DrivingBenchmark(object):
                     # Write the general status of the just ran episode
                     self._recording.write_summary_results(
                         experiment, pose, rep, initial_distance,
-                        remaining_distance, final_time, time_out, result, col_ped, col_veh, col_oth)
+                        remaining_distance, final_time, time_out, result, col_ped, col_veh, col_oth,
+                        number_of_red_lights, number_of_green_lights)
 
                     # Write the details of this episode.
                     self._recording.write_measurements_results(experiment, rep, pose, reward_vec,
@@ -230,12 +233,12 @@ class DrivingBenchmark(object):
         self._previous_other_collision = measurement.collision_other
 
         return collided_ped, collided_veh, collided_oth
+
     def _is_traffic_light_active(self, agent, orientation):
 
         x_agent = agent.traffic_light.transform.location.x
         y_agent = agent.traffic_light.transform.location.y
 
-        #_, tl_dist = get_vec_dist(x_agent, y_agent, location.x, location.y)
         def search_closest_lane_point(x_agent, y_agent, depth):
             step_size = 4
             if depth > 1:
@@ -289,7 +292,18 @@ class DrivingBenchmark(object):
             self._map.get_lane_orientation_degrees([closest_lane_point[0], closest_lane_point[1], 38])
                          ) < 1
 
-    def _has_agent_burned_tl(self, measurement):
+    def _test_for_traffic_lights(self, measurement):
+        """
+
+        This function tests if the car passed into a traffic light, returning 'red'
+        if it crossed a red light , 'green' if it crossed a green light or none otherwise
+
+        Args:
+            measurement: all the measurements collected by carla 0.8.4
+
+        Returns:
+
+        """
 
         def is_on_burning_point(_map, location):
 
@@ -326,22 +340,23 @@ class DrivingBenchmark(object):
         # THIS IS THE PLACE TO VERIFY FOR A TL BURN
 
         for agent in measurement.non_player_agents:
-
-            if not self._map.is_point_on_intersection([player_x, player_y, 38]):
-                x_agent = agent.traffic_light.transform.location.x
-                y_agent = agent.traffic_light.transform.location.y
-                tl_vector, tl_dist = get_vec_dist(x_agent, y_agent, player_x, player_y)
-
-                if agent.traffic_light.state != 0:  # Not green
+            if agent.HasField('traffic_light'):
+                if not self._map.is_point_on_intersection([player_x, player_y, 38]):
+                    x_agent = agent.traffic_light.transform.location.x
+                    y_agent = agent.traffic_light.transform.location.y
+                    tl_vector, tl_dist = get_vec_dist(x_agent, y_agent, player_x, player_y)
                     if self._is_traffic_light_active(agent,
-                                                     measurement.player_measurements.transform.orientation):
+                                                     measurement.player_measurements.
+                                                             transform.orientation):
                         if is_on_burning_point(self._map,
-                                               measurement.player_measurements.transform.location) \
+                                               measurement.player_measurements.transform.location)\
                                 and tl_dist < 6.0:
-                            return True
+                            if agent.traffic_light.state != 0:  # Not green
+                                return 'red'
+                            else:
+                                return 'green'
 
-        return False
-
+        return None
 
     def _run_navigation_episode(
             self,
@@ -382,8 +397,10 @@ class DrivingBenchmark(object):
         frame = 0
         distance = 10000
         col_ped, col_veh, col_oth = 0, 0, 0
+        traffic_light_state, number_red_lights, number_green_lights = None, 0, 0
         fail = False
         success = False
+        not_count = 0
 
         while not fail and not success:
 
@@ -407,6 +424,7 @@ class DrivingBenchmark(object):
                          control.steer, control.throttle, control.brake)
 
             current_timestamp = measurements.game_timestamp
+            logging.info('Timestamp %f', current_timestamp)
             # Get the distance travelled until now
 
             distance = sldist([current_x, current_y],
@@ -420,6 +438,20 @@ class DrivingBenchmark(object):
             # Check if reach the target
             col_ped, col_veh, col_oth = self._has_agent_collided(measurements.player_measurements,
                                                                  metrics_parameters)
+            # test if car crossed the traffic light
+            traffic_light_state = self._test_for_traffic_lights(measurements)
+
+            if traffic_light_state == 'red' and not_count == 0:
+                number_red_lights += 1
+                not_count = 20
+
+            elif traffic_light_state == 'green' and not_count == 0:
+                number_green_lights += 1
+                not_count = 20
+
+            else:
+                not_count -= 1
+                not_count = max(0, not_count)
 
             if distance < self._distance_for_success:
                 success = True
@@ -427,10 +459,12 @@ class DrivingBenchmark(object):
                 fail = True
             elif collision_as_failure and (col_ped or col_veh or col_oth):
                 fail = True
-            elif traffic_light_as_failure and self._has_agent_burned_tl(measurements):
+            elif traffic_light_as_failure and traffic_light_state == 'red':
                 fail = True
-
-
+            logging.info('Traffic Lights:')
+            logging.info(
+                'red %f green %f, total %f',
+                number_red_lights, number_green_lights, number_red_lights + number_green_lights)
             # Increment the vectors and append the measurements and controls.
             frame += 1
             measurement_vec.append(measurements.player_measurements)
@@ -438,8 +472,10 @@ class DrivingBenchmark(object):
 
         if success:
             return 1, measurement_vec, control_vec, float(
-                current_timestamp - initial_timestamp) / 1000.0, distance,  col_ped, col_veh, col_oth
-        return 0, measurement_vec, control_vec, time_out, distance, col_ped, col_veh, col_oth
+                current_timestamp - initial_timestamp) / 1000.0, distance,  col_ped, col_veh, col_oth, \
+                   number_red_lights, number_green_lights
+        return 0, measurement_vec, control_vec, time_out, distance, col_ped, col_veh, col_oth, \
+            number_red_lights, number_green_lights
 
 
 def run_driving_benchmark(agent,
