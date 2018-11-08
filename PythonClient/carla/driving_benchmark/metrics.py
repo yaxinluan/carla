@@ -325,10 +325,10 @@ class Metrics(object):
                 metrics_dictionary['end_other_collision'][w][t] = \
                     experiment_results_matrix[:, header.index('end_other_collision')].tolist()
 
-                metrics_dictionary['percentage_green_lights'][w][t] = (
+                metrics_dictionary['percentage_green_lights'][w][t] = np.nan_to_num((
                     experiment_results_matrix[:, header.index('number_green_lights')]/
                 (experiment_results_matrix[:, header.index('number_green_lights')] +
-                    experiment_results_matrix[:, header.index('number_red_lights')])).tolist()
+                    experiment_results_matrix[:, header.index('number_red_lights')])).tolist())
 
 
 
