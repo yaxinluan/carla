@@ -205,7 +205,9 @@ class Metrics(object):
 
         i = 0
 
-        # IF there is more than 20 consecutive frames...
+        # IF there is more than 50 consecutive frames... we say that the car got
+        # Stuck outside the road, counting this destroy the average
+        consecutive_frames = 0
 
         while i < selected_matrix.shape[0]:
 
@@ -214,7 +216,12 @@ class Metrics(object):
                 selected_matrix[i, header.index('intersection_otherlane')] \
                     > self._parameters['intersection_otherlane']['threshold']:
 
-                count_outside += 1
+                if consecutive_frames < 50:
+                    count_outside += 1
+
+                consecutive_frames += 1
+            else:
+                consecutive_frames = 0
             i += 1
 
 
