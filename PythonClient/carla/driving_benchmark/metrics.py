@@ -205,6 +205,8 @@ class Metrics(object):
 
         i = 0
 
+        # IF there is more than 20 consecutive frames...
+
         while i < selected_matrix.shape[0]:
 
             if (selected_matrix[i, header.index('intersection_offroad')]) \
@@ -328,7 +330,7 @@ class Metrics(object):
                 metrics_dictionary['percentage_green_lights'][w][t] = np.nan_to_num((
                     experiment_results_matrix[:, header.index('number_green_lights')]/
                 (experiment_results_matrix[:, header.index('number_green_lights')] +
-                    experiment_results_matrix[:, header.index('number_red_lights')])).tolist())
+                    experiment_results_matrix[:, header.index('number_red_lights')]))).tolist()
 
 
 
