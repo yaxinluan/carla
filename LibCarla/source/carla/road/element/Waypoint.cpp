@@ -43,11 +43,11 @@ namespace element {
     : _map(m) {
     DEBUG_ASSERT(_map != nullptr);
     double nearest_dist = std::numeric_limits<double>::max();
-    for (auto &&r : _map->GetData()._elements) {
-      auto current_dist = r.second->GetNearestPoint(loc);
+    for (auto &&r : _map->GetData().GetRoadSegments()) {
+      auto current_dist = r.GetNearestPoint(loc);
       if (current_dist.second < nearest_dist) {
         nearest_dist = current_dist.second;
-        _road_id = r.first;
+        _road_id = r.GetId();
         _dist = current_dist.first;
       }
     }
