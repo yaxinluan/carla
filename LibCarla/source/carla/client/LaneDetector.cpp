@@ -9,6 +9,7 @@
 #include "carla/Logging.h"
 #include "carla/client/Map.h"
 #include "carla/client/Vehicle.h"
+#include "carla/client/Waypoint.h"
 #include "carla/client/detail/Simulator.h"
 #include "carla/geom/Math.h"
 #include "carla/sensor/data/LaneInvasionEvent.h"
@@ -82,9 +83,16 @@ namespace client {
       const Timestamp &timestamp) {
     const auto new_bounds = GetVehicleBounds(*_vehicle);
     std::vector<road::element::LaneMarking> crossed_lanes;
-    for (auto i = 0u; i < _bounds.size(); ++i) {
+    auto debug = GetWorld().MakeDebugHelper();
+    for (auto i = 0u; i < 1u; ++i) {
       const auto lanes = _map->CalculateCrossedLanes(_bounds[i], new_bounds[i]);
       crossed_lanes.insert(crossed_lanes.end(), lanes.begin(), lanes.end());
+      debug.DrawPoint(new_bounds[i], 0.1f, {255u, 0u, 0u}, 5.0f);
+      auto w = _map->GetWaypoint(new_bounds[i], false);
+      if (w != nullptr) {
+        debug.DrawPoint(w->GetTransform().location + geom::Location(0,0,3), 0.1f, {0, 255u, 0u}, 5.0f);
+      }
+      debug.DrawPoint(_map->GetWaypoint(new_bounds[i])->GetTransform().location + geom::Location(0,0,3), 0.1f, {0u, 0u, 255u}, 5.0f);
     }
     _bounds = new_bounds;
     return crossed_lanes.empty() ?

@@ -6,6 +6,7 @@
 
 #include "carla/road/element/LaneCrossingCalculator.h"
 
+#include "carla/Logging.h"
 #include "carla/geom/Location.h"
 #include "carla/road/Map.h"
 
@@ -22,6 +23,9 @@ namespace element {
       const int lane_id_destination,
       const bool origin_is_offroad,
       const bool destination_is_offroad) {
+    log_warning(
+        "from", lane_id_origin, origin_is_offroad ? "(off-road)" : "(road)",
+        "to", lane_id_destination, destination_is_offroad ? "(off-road)" : "(road)");
     if (origin_is_offroad != destination_is_offroad) {
       return { LaneMarking::Solid };
     } else if (lane_id_origin == lane_id_destination) {
@@ -45,6 +49,7 @@ namespace element {
     auto w1 = map.GetClosestWaypointOnRoad(destination);
     if (w0.GetRoadId() != w1.GetRoadId()) {
       /// @todo This case should also be handled.
+      log_error("unhandled!!");
       return {};
     }
     return CrossingAtSameSection(
