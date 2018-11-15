@@ -268,8 +268,10 @@ class HUD(object):
     def __init__(self, width, height):
         self.dim = (width, height)
         font = pygame.font.Font(pygame.font.get_default_font(), 20)
-        mono = next(x for x in pygame.font.get_fonts() if 'mono' in x) # hope for the best...
-        mono = pygame.font.match_font(mono, bold=True)
+        fonts = [x for x in pygame.font.get_fonts() if 'mono' in x]
+        default_font = 'ubuntumono'
+        mono = default_font if default_font in fonts else fonts[0]
+        mono = pygame.font.match_font(mono)
         self._font_mono = pygame.font.Font(mono, 14)
         self._notifications = FadingText(font, (width, 40), (0, height - 40))
         self.help = HelpText(pygame.font.Font(mono, 24), width, height)
@@ -301,25 +303,25 @@ class HUD(object):
         max_col = max(1.0, max(collision))
         collision = [x / max_col for x in collision]
         self._info_text = [
-            'server:  % 16d FPS' % self.server_fps,
-            'client:  % 16d FPS' % clock.get_fps(),
+            'Server:  % 16d FPS' % self.server_fps,
+            'Client:  % 16d FPS' % clock.get_fps(),
             '',
-            'vehicle: % 20s' % get_actor_display_name(world.vehicle, truncate=20),
-            'map:     % 20s' % world.world.map_name,
-            'simulation time: % 12s' % datetime.timedelta(seconds=int(self.simulation_time)),
+            'Vehicle: % 20s' % get_actor_display_name(world.vehicle, truncate=20),
+            'Map:     % 20s' % world.world.map_name,
+            'Simulation time: % 12s' % datetime.timedelta(seconds=int(self.simulation_time)),
             '',
-            'speed:   % 15.0f km/h' % (3.6 * math.sqrt(v.x**2 + v.y**2 + v.z**2)),
-            u'heading:% 16.0f\N{DEGREE SIGN} % 2s' % (t.rotation.yaw, heading),
-            'location:% 20s' % ('(% 5.1f, % 5.1f)' % (t.location.x, t.location.y)),
-            'height:  % 18.0f m' % t.location.z,
+            'Speed:   % 15.0f km/h' % (3.6 * math.sqrt(v.x**2 + v.y**2 + v.z**2)),
+            u'Heading:% 16.0f\N{DEGREE SIGN} % 2s' % (t.rotation.yaw, heading),
+            'Location:% 20s' % ('(% 5.1f, % 5.1f)' % (t.location.x, t.location.y)),
+            'Height:  % 18.0f m' % t.location.z,
             '',
-            ('throttle:', c.throttle, 0.0, 1.0),
-            ('steer:', c.steer, -1.0, 1.0),
-            ('brake:', c.brake, 0.0, 1.0),
-            ('reverse:', c.reverse),
-            ('hand brake:', c.hand_brake),
+            ('Throttle:', c.throttle, 0.0, 1.0),
+            ('Steer:', c.steer, -1.0, 1.0),
+            ('Brake:', c.brake, 0.0, 1.0),
+            ('Reverse:', c.reverse),
+            ('Hand brake:', c.hand_brake),
             '',
-            'collision:',
+            'Collision:',
             collision
         ]
         vehicles = world.world.get_actors().filter('vehicle.*')
@@ -474,7 +476,7 @@ class CollisionSensor(object):
         impulse = event.normal_impulse
         intensity = math.sqrt(impulse.x**2 + impulse.y**2 + impulse.z**2)
         self._history.append((event.frame_number, intensity))
-        if len(self._history) > 2000:
+        if len(self._history) > 4000:
             self._history.pop(0)
 
 
